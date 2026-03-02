@@ -1,5 +1,0 @@
-{
-    "ext": "js,ejs",
-    "watch": ["src/**/*"],
-    "exec": "docker compose build && docker compose up -d && docker compose logs -f app"
-}

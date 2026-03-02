@@ -68,7 +68,7 @@ exports.uploadFile = async (req, res) => {
     status: "uploaded",
     sizeInBytes: req.file.size,
     mimeType: req.file.mimetype,
-    uploadedBy: req.token.number,
+    uploadedBy: req.user._id,
     originalName: req.file.originalname
   });
 

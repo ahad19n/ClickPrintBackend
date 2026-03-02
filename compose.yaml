@@ -2,6 +2,8 @@ services:
   mongo:
     image: mongo
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: dev
       MONGO_INITDB_ROOT_PASSWORD: dev
@@ -18,16 +20,5 @@ services:
   gotenberg:
     image: gotenberg/gotenberg:8
     restart: unless-stopped
-
-  app:
-    build: .
-    restart: unless-stopped
     ports:
-      - 3000:3000
-    environment:
-      API_KEY: ${API_KEY} 
-      JWT_SECRET: ${JWT_SECRET}
-      NOTIFYBOT_URL: ${NOTIFYBOT_URL}
-      GOTENBERG_URL: http://gotenberg:3000
-      GOTENBERG_WEBHOOK_URL: http://app:3000
-      MONGODB_URI: mongodb://dev:dev@mongo/CPDev?authSource=admin
+      - "127.0.0.1:3000:3000"

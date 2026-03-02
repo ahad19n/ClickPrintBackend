@@ -16,8 +16,7 @@ exports.updateUserProfile = async (req, res) => {
   if (!name) return resp(res, 400, 'Missing or invalid fields (name)');
 
   const user = await User.findByIdAndUpdate(req.user._id,
-    { name },
-    { new: true, runValidators: true }
+    { name }, { returnDocument: 'after' }
   );
 
   return resp(res, 200, 'Updated Profile Successfully', { profile: user });

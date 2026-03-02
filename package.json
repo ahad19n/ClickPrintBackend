@@ -1,7 +1,7 @@
 {
   "name": "clickprintbackend",
   "scripts": {
-    "dev": "nodemon"
+    "dev": "nodemon --env-file-if-exists=.env src/server.js"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
