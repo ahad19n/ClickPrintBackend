@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+
 module.exports = mongoose.model('Otp', new mongoose.Schema({
 
   code: { type: String, required: true },

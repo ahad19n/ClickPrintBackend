@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+
 module.exports = mongoose.model('Shop', new mongoose.Schema({
 
   name: { type: String, required: true },
