@@ -1,3 +1,5 @@
+const express = require('express');
+
 const { resp } = require('../func');
 
 const Job = require('../models/Job.model');
@@ -5,6 +7,8 @@ const File = require('../models/File.model');
 const Shop = require('../models/Shop.model');
 
 // -------------------------------------------------------------------------- //
+
+const router = express.Router();
 
 function validatePageSelection(ps) {
   return true // TODO
@@ -25,16 +29,16 @@ function validateSettingsObject(s) {
 
 // -------------------------------------------------------------------------- //
 
-exports.getUserJobs = async (req, res) => {
+router.get('/', async (req, res) => {
   return resp(res, 200, 'Fetched Jobs Successfully', await Job.find({
     createdBy: req.user._id,
     status: { $in: [ "pending", "queued" ]}
   }));
-};
+});
 
 // -------------------------------------------------------------------------- //
 
-exports.createNewJob = async (req, res) => {
+router.post('/', async (req, res) => {
   const { files, forShop } = req.body;
   
   if (!Array.isArray(files) || files.length === 0) {
@@ -61,4 +65,8 @@ exports.createNewJob = async (req, res) => {
   });
 
   return resp(res, 201, 'Created Job Successfully', job);
-};
+});
+
+// -------------------------------------------------------------------------- //
+
+module.exports = router;

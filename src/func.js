@@ -3,6 +3,16 @@ const { randomInt } = require('crypto');
 
 // -------------------------------------------------------------------------- //
 
+exports.resp = (res, code, message, data = {}) => {
+  return res.status(code).json({
+    success: (code >= 200 && code <= 299),
+    message,
+    data
+  })
+};
+
+// -------------------------------------------------------------------------- //
+
 exports.isValidE164NoPlus = (number) => {
   return /^[1-9]\d{7,14}$/.test(number);
 };
@@ -15,16 +25,6 @@ exports.generateOtpCode = (length) => {
     otp += randomInt(0, 10);
   return otp;
 }
-
-// -------------------------------------------------------------------------- //
-
-exports.resp = (res, code, message, data = {}) => {
-  return res.status(code).json({
-    success: (code >= 200 && code <= 299),
-    message,
-    data
-  })
-};
 
 // -------------------------------------------------------------------------- //
 
@@ -45,4 +45,19 @@ exports.gracefulShutdown = async (server) => {
     console.error('[ERROR] Error during server shutdown:', err);
     process.exit(1);
   }
+};
+
+// -------------------------------------------------------------------------- //
+
+exports.sendViaNotifyBot = async (number, message) => {
+  return await fetch(process.env.NOTIFYBOT_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      chatId: `${number}@c.us`,
+      message
+    })
+  });
 };

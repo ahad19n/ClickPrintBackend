@@ -1,17 +1,23 @@
+const express = require('express');
 const jwt = require('jsonwebtoken');
 
 const Otp = require('../models/Otp.model');
 const User = require('../models/User.model');
 
-const { resp, isValidE164NoPlus, generateOtpCode } = require('../func');
+const { resp } = require('../func');
+const { isValidE164NoPlus, generateOtpCode, sendViaNotifyBot } = require('../func');
 
 // -------------------------------------------------------------------------- //
 
-exports.generateOtp = async (req, res) => {
+const router = express.Router();
+
+// -------------------------------------------------------------------------- //
+
+router.post('/otp', async (req, res) => {
   const { number } = req.body || {};
 
   if (!number) return resp(res, 400, 'Missing or empty fields (number)');
-  if (!isValidE164NoPlus(number)) return resp(res, 400, `Field 'number' is not valid E164 (no plus)`);
+  if (!isValidE164NoPlus(number)) return resp(res, 400, `Field 'number' is not valid E164 (without +)`);
 
   try {
     const code = generateOtpCode(5);
@@ -22,18 +28,8 @@ exports.generateOtp = async (req, res) => {
       expiry: new Date(Date.now() + 1 * 60 * 1000)
     });
 
-    await fetch(process.env.NOTIFYBOT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chatId: `${number}@c.us`,
-        message: `[ClickPrint] Your OTP is: ${code}`,
-      })
-    });
-
-    return resp(res, 200, 'Sucessfully sent OTP via WhatsApp');
+    await sendViaNotifyBot(number, `[ClickPrint] Your OTP is: ${code}`);
+    return resp(res, 200, 'OTP Sent Successfully');
   }
 
   catch (err) {
@@ -41,9 +37,11 @@ exports.generateOtp = async (req, res) => {
       return resp(res, 429, 'Too many requests');
     else throw err;
   }
-};
+});
 
-exports.verifyOtp = async (req, res) => {
+// -------------------------------------------------------------------------- //
+
+router.post('/verify', async (req, res) => {
   const { code, number } = req.body || {};
 
   if (!code || !number) {
@@ -72,4 +70,8 @@ exports.verifyOtp = async (req, res) => {
 
   const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET);
   return resp(res, 200, 'Verified OTP Successfully', { token, profile: user });
-};
+});
+
+// -------------------------------------------------------------------------- //
+
+module.exports = router;

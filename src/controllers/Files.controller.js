@@ -1,139 +1,122 @@
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
-const fsp = require('fs/promises');
-const { pipeline } = require('stream/promises');
+const multer = require('multer');
+const express = require('express');
+
+const File = require('../models/File.model');
 
 const { resp } = require('../func');
-const File = require('../models/File.model');
-const { STORAGE_DIR } = require('../middlewares/handleFile');
+const { jwtAuth, keyAuth } = require('../auth');
 
 // -------------------------------------------------------------------------- //
 
-exports.downloadFile = async (req, res) => {
-  const { hash } = req.params;
+const jobs = new Map();
+const router = express.Router();
+const STORAGE_DIR = path.join(process.cwd(), 'files');
 
-  if (!hash || !/^[a-f0-9]{64}$/.test(hash)) {
-    return resp(res, 404, 'File Not Found');
-  }
+for (const dir of [STORAGE_DIR, `${STORAGE_DIR}/temp`]) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
 
-  const fileDoc = await File.findOne({ hash });
-  const filePath = path.join(STORAGE_DIR, hash);
-
-  if (!fileDoc || !fs.existsSync(filePath)) {
-    return resp(res, 404, 'File Not Found');
-  }
-
-  if (fileDoc.mimeType === 'application/pdf') {
-    fileDoc.originalName += '.pdf';
-  }
-
-  res.setHeader('Content-Type', fileDoc.mimeType);
-  res.setHeader('Content-Length', fileDoc.sizeInBytes);
-  res.setHeader('Content-Disposition', `attachment; filename="${ fileDoc.originalName }"`);
-
-  const readStream = fs.createReadStream(filePath);
-  readStream.on('error', err => res.destroy());
-
-  return readStream.pipe(res);
-};
+const handleFile = multer({
+  dest: `${STORAGE_DIR}/temp`,
+  limits: { fileSize: 100 * 1024 * 1024 },
+}).single('file');
 
 // -------------------------------------------------------------------------- //
 
-exports.uploadFile = async (req, res) => {
-  if (!req.file) return resp(res, 400, 'No File Provided');
+// router.get('/:prefix(temp)?/:fileId([0-9a-fA-F]+)', jwtAuth, async (req, res) => {
+//   const { prefix, fileId } = req.params;
+//   const filePath = path.join(STORAGE_DIR, prefix ?? '', fileId);
 
-  const rawHash = crypto.createHash('sha256');
-  const readStream = fs.createReadStream(req.file.path);
+//   if (!filePath.startsWith(STORAGE_DIR + path.sep)) {
+//     return resp(res, 400, 'Invalid path');
+//   }
 
-  await new Promise((resolve, reject) => {
-    readStream.on('end', resolve);
-    readStream.on('error', reject);
-    readStream.on('data', chunk => {
-      rawHash.update(chunk)
+//   if (!fs.existsSync(filePath)) {
+//     return resp(res, 404, 'File Not Found');
+//   }
+
+//   const readStream = fs.createReadStream(filePath);
+//   readStream.on('error', err => res.destroy());
+
+//   return readStream.pipe(res);
+// });
+
+// -------------------------------------------------------------------------- //
+
+router.put('/:fileId([0-9a-fA-F]+)', keyAuth, handleFile, async (req, res) => {
+  const { fileId } = req.params;
+
+  const promise = jobs.get(fileId);
+  const filePath = path.join(STORAGE_DIR, fileId);
+
+  if (!req.file) {
+    return resp(res, 400, 'No File Provided');
+  }
+
+  await fs.promises.rename(req.file.path, filePath);
+
+  if (promise) {
+    jobs.delete(fileId);
+    promise.resolve(fileId);
+  }
+
+  return resp(res, 200, 'Updated File Successfully');
+});
+
+// -------------------------------------------------------------------------- //
+
+router.post('/', jwtAuth, handleFile, async (req, res) => {
+  if (!req.file) {
+    return resp(res, 400, 'No File Provided');
+  }
+
+  const fileId = req.file.filename;
+  const filePath = path.join(STORAGE_DIR, fileId);
+
+  const url = `${process.env.ABSOLUTE_URI}/api/files/temp/${fileId}`;
+  const extraHttpHeaders = { 'Authorization': `Apikey ${process.env.API_KEY}` };
+
+  if (req.file.mimetype !== 'application/pdf') {
+    const promise = new Promise((resolve, reject) => {
+      jobs.set(fileId, { resolve, reject });
     });
-  });
 
-  const hash = rawHash.digest('hex');
-  const finalPath = path.join(STORAGE_DIR, hash);
+    await fetch(`${process.env.GOTENBERG_URI}/forms/libreoffice/convert`, {
+      method: 'POST',
+      headers: {
+        'Gotenberg-Webhook-Url': url,
+        'Gotenberg-Webhook-Method': 'PUT',
+        'Gotenberg-Webhook-Error-Url': url,
+        'Gotenberg-Webhook-Error-Method': 'PUT',
+        'Gotenberg-Webhook-Extra-Http-Headers': extraHttpHeaders
+      },
+      body: Object.assign(new FormData(), { downloadFrom: [{ url, extraHttpHeaders }] })
+    });
 
-  if (fs.existsSync(finalPath)) {
-    fs.unlinkSync(req.file.path);
-    return resp(res, 200, 'File Already Exists', { hash });
+    await promise;
   }
 
-  fs.renameSync(req.file.path, finalPath);
+  const metadata = await (
+    await fetch(`${process.env.GOTENBERG_URI}/forms/pdfengines/metadata/read`, {
+      method: 'POST',
+      body: Object.assign(new FormData(), { downloadFrom: [{ url, extraHttpHeaders }] })
+    })
+  ).json();
+
+  fs.renameSync(req.file.path, filePath);
+
   await File.create({
-    hash,
-    status: "uploaded",
-    sizeInBytes: req.file.size,
-    mimeType: req.file.mimetype,
+    fileId,
     uploadedBy: req.user._id,
-    originalName: req.file.originalname
+    numberOfPages: metadata.PageCount,
+    originalName: req.file.originalname,
   });
 
-  const formData = new FormData();
-  formData.append('downloadFrom', JSON.stringify([{
-    url: `${ process.env.GOTENBERG_WEBHOOK_URL }/api/files/${ hash }`,
-    extraHttpHeaders: { 'Authorization': `Apikey ${ process.env.API_KEY }` }
-  }]));
-
-  await fetch(`${ process.env.GOTENBERG_URL }/forms/libreoffice/convert`, {
-    method: 'POST',
-    headers: {
-      'Gotenberg-Webhook-Url': `${ process.env.GOTENBERG_WEBHOOK_URL }/api/files/${ hash }`,
-      'Gotenberg-Webhook-Error-Url': `${ process.env.GOTENBERG_WEBHOOK_URL }/api/files/${ hash }`,
-      'Gotenberg-Webhook-Method': 'PUT',
-      'Gotenberg-Webhook-Error-Method': 'PUT',
-      'Gotenberg-Webhook-Extra-Http-Headers': JSON.stringify({
-        'Authorization': `Apikey ${ process.env.API_KEY }`
-      })
-    },
-    body: formData
-  });
-
-  return resp(res, 202, 'File Uploaded Successfully', { hash });
-};
+  return resp(res, 201, 'File Uploaded Successfully', { fileId });
+});
 
 // -------------------------------------------------------------------------- //
 
-exports.getFileStatus = async (req, res) => {
-  const { hash } = req.params;
-
-  if (!hash || !/^[a-f0-9]{64}$/.test(hash)) {
-    return resp(res, 404, 'File Not Found');
-  }
-
-  const fileDoc = await File.findOne({ hash });
-  if (!fileDoc) return resp(res, 404, 'File Not Found');
-
-  return resp(res, 200, 'File Status Retrieved', {
-    hash, status: fileDoc.status
-  });
-};
-
-// -------------------------------------------------------------------------- //
-
-exports.updateFile = async (req, res) => {
-  const { hash } = req.params;
-
-  if (!hash || !/^[a-f0-9]{64}$/.test(hash)) {
-    return resp(res, 404, 'File Not Found');
-  }
-
-  const fileDoc = await File.findOne({ hash });
-  if (!fileDoc) return resp(res, 404, 'File Not Found');
-
-  const finalPath = path.join(STORAGE_DIR, hash);
-  const tempPath = finalPath + ".tmp";
-
-  await pipeline(req, fs.createWriteStream(tempPath));
-  await fsp.rename(tempPath, finalPath);
-
-  fileDoc.status = "processed";
-  fileDoc.mimeType = req.get('Content-Type');
-  fileDoc.sizeInBytes = req.get('Content-Length');
-  await fileDoc.save();
-
-  return resp(res, 200, "File Replaced Successfully", { hash });
-};
+module.exports = router;

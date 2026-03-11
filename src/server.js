@@ -20,9 +20,12 @@ app.use(morgan('combined', {
 // -------------------------------------------------------------------------- //
 
 const required = [
-  'API_KEY', 'JWT_SECRET',
-  'MONGODB_URI', 'NOTIFYBOT_URL',
-  'GOTENBERG_URL', 'GOTENBERG_WEBHOOK_URL'
+  'API_KEY',
+  'JWT_SECRET',
+  'MONGODB_URI',
+  'ABSOLUTE_URI',
+  'GOTENBERG_URI',
+  'NOTIFYBOT_URI',
 ];
 
 for (const v of required) {
@@ -57,7 +60,7 @@ app.get('/health', async (req, res) => {
 
 // -------------------------------------------------------------------------- //
 
-app.use('/api', require('./routes/index.routes'));
+app.use('/api', require('./routes'));
 
 // -------------------------------------------------------------------------- //
 
@@ -68,8 +71,9 @@ app.use((err, req, res, next) => {
 
 // -------------------------------------------------------------------------- //
 
-const server = app.listen(process.env.PORT || 3000, () => {
-  console.log('[INFO] Server listening on port', process.env.PORT || 3000);
+const PORT = process.env.PORT || 3000;
+const server = app.listen(PORT, () => {
+  console.log('[INFO] Server listening on port', PORT);
 });
 
 process.on('SIGINT', () => gracefulShutdown(server));

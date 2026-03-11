@@ -1,7 +1,7 @@
 const express = require('express');
 
 const { resp } = require('../func');
-const Shop = require('../models/Shop.model');
+const { sendViaNotifyBot } = require('../func');
 
 // -------------------------------------------------------------------------- //
 
@@ -9,10 +9,8 @@ const router = express.Router();
 
 // -------------------------------------------------------------------------- //
 
-router.get('/', async (req, res) => {
-  return resp(res, 200, 'Fetched Shops Successfully', {
-    shops: await Shop.find()
-  });
+router.post('/', async (req, res) => {
+  return resp(res, 501, 'Not Implemented Yet');
 });
 
 // -------------------------------------------------------------------------- //

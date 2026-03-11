@@ -2,8 +2,19 @@ const mongoose = require('mongoose');
 
 module.exports = mongoose.model('User', new mongoose.Schema({
 
-  name: { type: String, default: '' },
-  balance: { type: Number, default: 0 },
-  number: { type: String, required: true, unique: true, index: true },
+  name: {
+    default: '',
+    type: String,
+  },
+  balance: {
+    default: 0,
+    type: Number,
+  },
+  number: {
+    type: String,
+    unique: true,
+    index: true,
+    required: true,
+  },
 
 }, { versionKey: false, timestamps: false }));
