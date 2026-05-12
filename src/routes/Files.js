@@ -8,7 +8,6 @@ const File = require('../models/File');
 
 const { resp } = require('../func');
 const { buildFormData } = require('../func');
-const { jwtAuth, keyAuth } = require('../func');
 
 // -------------------------------------------------------------------------- //
 
@@ -27,6 +26,11 @@ const upload = multer({
 
 function validateFileId(fileId) {
   return /^[0-9a-f]{32}$/.test(fileId)
+}
+
+function requireServiceToken(req, res, next) {
+  if (req.token.actor === 'service') next();
+  return resp(res, 403, 'Forbidden');
 }
 
 // -------------------------------------------------------------------------- //
@@ -49,12 +53,12 @@ async function serveFile(req, res, prefix = '') {
   return readStream.pipe(res);
 }
 
-router.get('/:fileId', jwtAuth, (req, res) => serveFile(req, res));
-router.get('/temp/:fileId', keyAuth, (req, res) => serveFile(req, res, 'temp'));
+router.get('/:fileId', (req, res) => serveFile(req, res));
+router.get('/temp/:fileId', requireServiceToken, (req, res) => serveFile(req, res, 'temp'));
 
 // -------------------------------------------------------------------------- //
 
-router.put('/:fileId', keyAuth, async (req, res) => {
+router.put('/:fileId', requireServiceToken, async (req, res) => {
   const { fileId } = req.params;
   if (!validateFileId(fileId)) return resp(res, 404, 'File Not Found');
 
@@ -73,7 +77,7 @@ router.put('/:fileId', keyAuth, async (req, res) => {
 
 // -------------------------------------------------------------------------- //
 
-router.post('/', jwtAuth, upload.single('file'), async (req, res) => {
+router.post('/', upload.single('file'), async (req, res) => {
   if (!req.file) return resp(res, 400, 'No File Provided');
 
   if (req.file.mimetype !== 'application/pdf') {
@@ -81,21 +85,21 @@ router.post('/', jwtAuth, upload.single('file'), async (req, res) => {
       jobs.set(req.file.filename, { resolve, reject, file: req.file })
     });
 
-    await fetch(`${process.env.GOTENBERG_URI}/forms/libreoffice/convert`, {
+    await fetch(`${process.env.GOTENBERG_URL}/forms/libreoffice/convert`, {
       method: 'POST',
       headers: {
-        'Gotenberg-Webhook-Url': `${process.env.ABSOLUTE_URI}/api/files/${req.file.filename}`,
-        'Gotenberg-Webhook-Error-Url': `${process.env.ABSOLUTE_URI}/api/files/${req.file.filename}`,
+        'Gotenberg-Webhook-Url': `${process.env.INTERNAL_URL}/api/files/${req.file.filename}`,
+        'Gotenberg-Webhook-Error-Url': `${process.env.INTERNAL_URL}/api/files/${req.file.filename}`,
         'Gotenberg-Webhook-Method': 'PUT',
         'Gotenberg-Webhook-Error-Method': 'PUT',
         'Gotenberg-Webhook-Extra-Http-Headers': JSON.stringify({
-          'Authorization': `Apikey ${process.env.API_KEY}`
+          'Authorization': `Bearer ${process.env.SERVICE_TOKEN}`
         })
       },
       body: buildFormData({
         downloadFrom: [{
-          url: `${process.env.ABSOLUTE_URI}/api/files/temp/${req.file.filename}`,
-          extraHttpHeaders: { 'Authorization': `Apikey ${process.env.API_KEY}` }
+          url: `${process.env.INTERNAL_URL}/api/files/temp/${req.file.filename}`,
+          extraHttpHeaders: { 'Authorization': `Bearer ${process.env.SERVICE_TOKEN}` }
         }]
       })
     });
@@ -103,12 +107,12 @@ router.post('/', jwtAuth, upload.single('file'), async (req, res) => {
     await promise;
   }
 
-  const response = await fetch(`${process.env.GOTENBERG_URI}/forms/pdfengines/metadata/read`, {
+  const response = await fetch(`${process.env.GOTENBERG_URL}/forms/pdfengines/metadata/read`, {
     method: 'POST',
     body: buildFormData({
       downloadFrom: [{
-        url: `${process.env.ABSOLUTE_URI}/api/files/temp/${req.file.filename}`,
-        extraHttpHeaders: { 'Authorization': `Apikey ${process.env.API_KEY}` }
+        url: `${process.env.INTERNAL_URL}/api/files/temp/${req.file.filename}`,
+        extraHttpHeaders: { 'Authorization': `Bearer ${process.env.SERVICE_TOKEN}` }
       }]
     })
   });

@@ -1,5 +1,6 @@
 const morgan = require('morgan');
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 
 const { resp, jwtAuth } = require('./func');
@@ -34,6 +35,8 @@ for (const v of required) {
   }
 }
 
+process.env.SERVICE_TOKEN = jwt.sign({ actor: 'service' }, process.env.JWT_SECRET);
+
 // -------------------------------------------------------------------------- //
 
 mongoose.connect(process.env.MONGODB_URI)
@@ -59,15 +62,14 @@ app.get('/health', async (req, res) => {
 
 // -------------------------------------------------------------------------- //
 
-app.use('/events', require('./routes/Events.js'));
-
 app.use('/api/auth', require('./routes/Auth.js'));
-app.use('/api/files', require('./routes/Files.js'));
-
 app.use('/api/jobs', jwtAuth, require('./routes/Jobs.js'));
+app.use('/api/files', jwtAuth, require('./routes/Files.js'));
 app.use('/api/shops', jwtAuth, require('./routes/Shops.js'));
 app.use('/api/history', jwtAuth, require('./routes/History.js'));
 app.use('/api/profile', jwtAuth, require('./routes/Profile.js'));
+
+app.use('/events', jwtAuth, require('./routes/Events.js'));
 
 // -------------------------------------------------------------------------- //
 
@@ -78,9 +80,8 @@ app.use((err, req, res, next) => {
 
 // -------------------------------------------------------------------------- //
 
-const PORT = process.env.PORT || 3000;
-const server = app.listen(PORT, () => {
-  console.log('[INFO] Server listening on port', PORT);
+const server = app.listen(process.env.PORT || 3000, () => {
+  console.log('[INFO] Server listening on port', process.env.PORT || 3000);
 });
 
 // -------------------------------------------------------------------------- //

@@ -71,5 +71,3 @@ exports.jwtAuth = (req, res, next) => {
     return exports.resp(res, 401, 'Invalid or Expired JWT');
   }
 };
-
-exports.keyAuth = (req, res, next) => {};

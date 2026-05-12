@@ -1,15 +1,12 @@
-const express = require('express');
 const jwt = require('jsonwebtoken');
+const express = require('express');
+const router = express.Router();
 
 const Otp = require('../models/Otp');
 const User = require('../models/User');
 
 const { resp } = require('../func');
 const { isValidE164NoPlus, generateOtpCode, sendViaNotifyBot } = require('../func');
-
-// -------------------------------------------------------------------------- //
-
-const router = express.Router();
 
 // -------------------------------------------------------------------------- //
 
@@ -38,8 +35,6 @@ router.post('/otp', async (req, res) => {
     else throw err;
   }
 });
-
-// -------------------------------------------------------------------------- //
 
 router.post('/verify', async (req, res) => {
   const { code, number } = req.body || {};

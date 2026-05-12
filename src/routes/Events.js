@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 
-const { jwtAuth, sseClients } = require('../func');
+const { resp, sseClients } = require('../func');
 
 // -------------------------------------------------------------------------- //
 
-router.get('/', jwtAuth, async (req, res) => {
+router.get('/', async (req, res) => {
   if (req.token.actor !== 'shop') return resp(res, 403, 'Forbidden');
 
   res.set({
