@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { resp } = require('../func');
+const { resp } = require('../func/misc');
 
 // -------------------------------------------------------------------------- //
 

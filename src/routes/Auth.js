@@ -5,8 +5,8 @@ const router = express.Router();
 const Otp = require('../models/Otp');
 const User = require('../models/User');
 
-const { resp } = require('../func');
-const { isValidE164NoPlus, generateOtpCode, sendViaNotifyBot } = require('../func');
+const { resp } = require('../func/misc');
+const { isValidE164NoPlus, generateOtpCode, sendViaNotifyBot } = require('../func/misc');
 
 // -------------------------------------------------------------------------- //
 

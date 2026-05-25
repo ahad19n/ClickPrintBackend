@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
-const { resp } = require('../func');
 const Shop = require('../models/Shop');
+
+const { resp } = require('../func/misc');
 
 // -------------------------------------------------------------------------- //
 

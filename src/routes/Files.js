@@ -6,8 +6,7 @@ const { pipeline } = require('stream/promises');
 
 const File = require('../models/File');
 
-const { resp } = require('../func');
-const { buildFormData } = require('../func');
+const { resp, buildFormData } = require('../func/misc');
 
 // -------------------------------------------------------------------------- //
 
@@ -29,8 +28,8 @@ function validateFileId(fileId) {
 }
 
 function requireServiceToken(req, res, next) {
-  if (req.token.actor === 'service') next();
-  return resp(res, 403, 'Forbidden');
+  if (req.token.actor !== 'service') return resp(res, 403, 'Forbidden');
+  next();
 }
 
 // -------------------------------------------------------------------------- //
@@ -123,7 +122,7 @@ router.post('/', upload.single('file'), async (req, res) => {
 
   await File.create({
     fileId: req.file.filename,
-    uploadedBy: req.user._id,
+    uploadedBy: req.token.user._id,
     numberOfPages: metadata.PageCount,
     originalName: req.file.originalname,
   });

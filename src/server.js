@@ -3,7 +3,8 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 
-const { resp, jwtAuth } = require('./func');
+const { resp } = require('./func/misc');
+const { jwtAuth } = require('./func/auth');
 
 // -------------------------------------------------------------------------- //
 

@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
-const { resp, sseClients } = require('../func');
+const { resp } = require('../func/misc');
+const { sseClients } = require('../func/sse');
 
 // -------------------------------------------------------------------------- //
 
