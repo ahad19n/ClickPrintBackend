@@ -6,6 +6,7 @@ const router = express.Router();
 const Otp = require('../models/Otp');
 const Shop = require('../models/Shop');
 const User = require('../models/User');
+const ShopAdmin = require('../models/ShopAdmin');
 
 const { resp, sendViaNotifyBot } = require('../func/misc');
 
@@ -104,10 +105,10 @@ router.post('/verify', async (req, res) => {
   if (actor === 'user') {
     profile = user;
   } else {
-    // actor === 'shop': the number must already own a registered shop
-    const shop = await Shop.findOne({ owner: user._id });
-    if (!shop) return resp(res, 404, 'no shop registered for this number');
-    profile = shop;
+    // actor === 'shop': the number must be registered as a shop admin
+    const shopAdmin = await ShopAdmin.findOne({ user: user._id }).populate('shop');
+    if (!shopAdmin) return resp(res, 403, 'This number is not registered as a ClickPrint shop owner.', { errorCode: 'SHOP_NOT_REGISTERED' });
+    profile = shopAdmin.shop;
   }
 
   const token = jwt.sign(
