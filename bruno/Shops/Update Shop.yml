@@ -14,9 +14,9 @@ http:
     type: json
     data: |-
       {
-        "name": "My Print Shop",
-        "address": "123 Main Street",
-        "capabilities": ["color", "a3", "binding"]
+        "name": "Ahad Print Shop",
+        "address": "Westridge 3, Rawalpindi",
+        "capabilities": ["bw", "a4"]
       }
   auth: inherit
 

@@ -17,6 +17,7 @@ module.exports = mongoose.model('Job', new mongoose.Schema({
   createdAt: { type: Date, required: true, default: Date.now() },
   
   status: { type: String, required: true },
+  statusHistory: { type: [{ status: String, by: String, at: Date }], default: [] },
   forShop: { ref: Shop, required: true, type: mongoose.Schema.Types.ObjectId },
   createdBy: { ref: User, required: true, type: mongoose.Schema.Types.ObjectId },
 
