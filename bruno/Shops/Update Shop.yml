@@ -1,0 +1,27 @@
+info:
+  name: Update Shop
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{host}}/api/shops/:id"
+  params:
+    - name: id
+      value: 69a4fcff6bcec57ff348135e
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "name": "My Print Shop",
+        "address": "123 Main Street",
+        "capabilities": ["color", "a3", "binding"]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
