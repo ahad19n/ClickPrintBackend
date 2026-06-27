@@ -1,26 +1,29 @@
 const express = require('express');
 const router = express.Router();
 
-const { resp } = require('../func/misc');
 const User = require('../models/User');
+const Shop = require('../models/Shop');
+
+const { resp } = require('../func/misc');
 
 // -------------------------------------------------------------------------- //
 
 router.get('/', async (req, res) => {
-  return resp(res, 200, 'Profile fetched successfully', {
-    profile: await User.findById(req.token.uid)
-  });
+  const user = await User.findById(req.token.uid);
+  const shop = req.token.sid ? await Shop.findById(req.token.sid) : null;
+
+  return resp(res, 200, 'fetched profile', { profile: user, ...(shop && { shop }) });
 });
 
 router.patch('/', async (req, res) => {
   const { name } = req.body || {};
-  if (!name) return resp(res, 400, 'Missing or invalid fields (name)');
+  if (!name) return resp(res, 400, 'missing or invalid fields (name)');
 
   const user = await User.findByIdAndUpdate(
     req.token.uid, { name }, { returnDocument: 'after' }
   );
 
-  return resp(res, 200, 'Profile updated successfully', { profile: user });
+  return resp(res, 200, 'profile updated', { profile: user });
 });
 
 // -------------------------------------------------------------------------- //
