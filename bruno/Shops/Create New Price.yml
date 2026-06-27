@@ -14,10 +14,10 @@ http:
     type: json
     data: |-
       {
-        "name": "BW A4 Page Double Sided",
-        "rate": 15,
+        "name": "A4-CL-DS",
+        "rate": 20,
         "keys": {
-          "colored": false,
+          "colored": true,
           "pageType": "A4",
           "sidedness": true
         }

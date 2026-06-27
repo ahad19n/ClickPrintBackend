@@ -8,7 +8,7 @@ http:
   url: "{{host}}/api/drafts/:draftId/submit"
   params:
     - name: draftId
-      value: 6a3fc48f30912925eef84284
+      value: 6a3fd8a2f4cabbad5f29c841
       type: path
   auth: inherit
 
