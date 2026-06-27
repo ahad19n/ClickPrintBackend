@@ -7,7 +7,7 @@ const { sseClients } = require('../func/sse');
 // -------------------------------------------------------------------------- //
 
 router.get('/', async (req, res) => {
-  if (req.token.actor !== 'shop') return resp(res, 403, 'Forbidden');
+  if (!req.token.sid) return resp(res, 403, 'Forbidden');
 
   res.set({
     'Connection': 'keep-alive',
@@ -16,17 +16,17 @@ router.get('/', async (req, res) => {
   });
 
   res.flushHeaders();
-  sseClients.set(req.token.shopId, res);
+  sseClients.set(req.token.sid, res);
 
   // Initial hello so the client knows it's connected
-  res.write(`event: connected\ndata: ${ req.token.shopId }\n\n`);
+  res.write(`event: connected\ndata: ${ req.token.sid }\n\n`);
 
   // Heartbeat to keep proxies from killing idle connections
   const heartbeat = setInterval(() => res.write(': keepalive\n\n'), 15000);
 
   req.on('close', () => {
     clearInterval(heartbeat);
-    sseClients.delete(req.token.shopId);
+    sseClients.delete(req.token.sid);
   });
 });
 
