@@ -1,0 +1,23 @@
+info:
+  name: Upload File
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{host}}/api/files"
+  body:
+    type: multipart-form
+    data:
+      - name: file
+        type: file
+        value:
+          - /home/ahad/Pictures/Screenshots/Screenshot From 2026-06-24 18-07-15.png
+        contentType: image/png
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
