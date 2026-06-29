@@ -51,11 +51,31 @@ router.post('/:shopId/prices', validateObjectIds('shopId'), async (req, res) => 
 });
 
 router.put('/:shopId/prices/:priceId', validateObjectIds('shopId', 'priceId'), async (req, res) => {
-  return resp(res, 501, 'Not Implemented Yet');
+  if (!req.token.sid || req.token.sid !== req.params.shopId) return resp(res, 403, 'forbidden');
+
+  const { name, rate, keys } = req.body || {};
+  const updates = {};
+  if (name !== undefined) updates.name = name;
+  if (rate !== undefined) updates.rate = rate;
+  if (keys !== undefined) updates.keys = keys;
+
+  const price = await Price.findOneAndUpdate(
+    { _id: req.params.priceId, shop: req.params.shopId },
+    updates,
+    { new: true, runValidators: true },
+  );
+
+  if (!price) return resp(res, 404, 'not found');
+  return resp(res, 200, 'updated price', price);
 });
 
 router.delete('/:shopId/prices/:priceId', validateObjectIds('shopId', 'priceId'), async (req, res) => {
-  return resp(res, 501, 'Not Implemented Yet');
+  if (!req.token.sid || req.token.sid !== req.params.shopId) return resp(res, 403, 'forbidden');
+
+  const price = await Price.findOneAndDelete({ _id: req.params.priceId, shop: req.params.shopId });
+
+  if (!price) return resp(res, 404, 'not found');
+  return resp(res, 200, 'deleted price');
 });
 
 // -------------------------------------------------------------------------- //
