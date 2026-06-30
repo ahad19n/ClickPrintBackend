@@ -31,7 +31,7 @@ function generateOtpCode(length) {
 // -------------------------------------------------------------------------- //
 
 router.post('/otp', async (req, res) => {
-  const { number } = req.body || {};
+  const { number, actor } = req.body || {};
 
   if (!number) return resp(res, 400, `missing or empty field 'number'`);
   if (!isValidE164NoPlus(number)) return resp(res, 400, `field 'number' is not in valid E164 format (without the +)`);
@@ -40,6 +40,17 @@ router.post('/otp', async (req, res) => {
   const existing = await Otp.findOne({ number }).lean();
   if (existing && Date.now() - existing.lastSentAt.getTime() < OTP_RESEND_COOLDOWN_MS) {
     return resp(res, 429, 'too many requests');
+  }
+
+  if (actor == "shop") {
+    const user = await User.findOne({ number });
+    if (!user) {
+      return resp(res, 404, 'No registered user found with this number');
+    }
+    const shop = await Shop.findOne({ owner: user._id });
+    if (!shop) {
+      return resp(res, 404, 'No registered shop found for this user');
+    }
   }
 
   const now = new Date();
@@ -58,7 +69,7 @@ router.post('/otp', async (req, res) => {
     { upsert: true, new: true }
   );
 
-  await sendViaNotifyBot(number, `[ClickPrint] Your OTP is: ${code}`);
+  await sendViaNotifyBot(number, `Your Click Print one-time password (OTP) is: ${code}\n\nDo not share this code with anyone. Click Print will never ask you for your OTP.\n\nThis code expires in 5 minutes.`);
   return resp(res, 200, 'otp sent');
 });
 
